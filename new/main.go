@@ -18,7 +18,7 @@ func main() {
 
 	cmd := exec.Command(
 		"go", "run", "rsc.io/tmp/gonew@latest",
-		"github.com/leapkit/leapkit/template@latest",
+		"go.leapkit.dev/template@latest",
 		args[1],
 	)
 

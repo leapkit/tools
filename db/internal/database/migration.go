@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leapkit/leapkit/core/db"
+	"go.leapkit.dev/core/db"
 )
 
 var (
@@ -57,7 +57,6 @@ func newMigration(name string) error {
 		"Name":      name,
 		"Timestamp": timestamp,
 	})
-
 	if err != nil {
 		return fmt.Errorf("error executing migrations template: %w", err)
 	}

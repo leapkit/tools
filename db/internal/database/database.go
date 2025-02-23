@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/leapkit/leapkit/core/db"
 	flag "github.com/spf13/pflag"
+	"go.leapkit.dev/core/db"
 
 	// Loading .env file
-	_ "github.com/leapkit/leapkit/core/tools/envload"
+	_ "go.leapkit.dev/core/tools/envload"
 
 	// Postgres driver
 	_ "github.com/lib/pq"

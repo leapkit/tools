@@ -30,6 +30,15 @@ func readProcfile(path string) ([]entry, error) {
 			continue
 		}
 
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+
+		// Skipping comments in Procfile
+		if strings.HasPrefix(parts[0], "#") {
+			continue
+		}
+
 		exists := slices.ContainsFunc(entries, func(e entry) bool {
 			return e.Name == parts[0]
 		})
@@ -38,11 +47,14 @@ func readProcfile(path string) ([]entry, error) {
 			continue
 		}
 
-		entries = append(entries, entry{
+		e := entry{
 			ID:      len(entries),
 			Name:    strings.TrimSpace(parts[0]),
 			Command: strings.TrimSpace(parts[1]),
-		})
+		}
+
+		entries = append(entries, e)
+		maxServiceNameLen = max(maxServiceNameLen, len(e.Name))
 	}
 
 	if err := scanner.Err(); err != nil {

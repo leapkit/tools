@@ -10,7 +10,9 @@ import (
 	"time"
 )
 
-var maxServiceNameLen = 4
+// MaxServiceNameLen will receive the max length of the command name.
+// This will be used to calculate the trailing spaces.
+var maxServiceNameLen int
 
 var colors = []string{
 	"\033[92m", // Green
@@ -38,7 +40,7 @@ func (cw *customWriter) Write(p []byte) (int, error) {
 	defer cw.mu.Unlock()
 
 	timestamp := time.Now().Format(time.DateTime)
-	trailingSpaces := strings.Repeat(" ", max(maxServiceNameLen-len(cw.prefix), 0))
+	trailingSpaces := strings.Repeat(" ", max(maxServiceNameLen-len(cw.prefix), 0)+1)
 
 	scanner := bufio.NewScanner(bytes.NewReader(p))
 	for scanner.Scan() {
@@ -54,6 +56,10 @@ func (cw *customWriter) Write(p []byte) (int, error) {
 		if _, err := cw.writer.Write([]byte(line)); err != nil {
 			return 0, err
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, err
 	}
 
 	return len(p), nil

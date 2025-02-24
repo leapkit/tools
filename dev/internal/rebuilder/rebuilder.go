@@ -2,7 +2,6 @@ package rebuilder
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,8 +12,6 @@ func Serve(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("[kit] Starting app")
 
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -35,8 +32,6 @@ func Serve(ctx context.Context) error {
 	for range entries {
 		<-exitCh
 	}
-
-	fmt.Println("[kit] Shutting down...")
 
 	return nil
 }

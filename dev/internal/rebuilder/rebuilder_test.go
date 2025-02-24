@@ -347,4 +347,90 @@ func TestServe(t *testing.T) {
 			t.Errorf("Expected an error, got nil")
 		}
 	})
+
+	t.Run("Validate log trailing spaces", func(t *testing.T) {
+		r, w, _ := os.Pipe()
+
+		stdOut := os.Stdout
+		stdErr := os.Stderr
+
+		os.Stdout = w
+		os.Stderr = w
+		t.Cleanup(func() {
+			os.Stdout = stdOut
+			os.Stderr = stdErr
+		})
+
+		procfile()
+		os.WriteFile("Procfile", []byte("123: echo '123'\n1234: echo '1234'\n12345: echo '12345'"), 0o644)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		if err := rebuilder.Serve(ctx); err != nil {
+			t.Errorf("Expected nil, got '%v'", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "123   |") {
+			t.Errorf("Expected '123   |' to be in the output, got '%v'", buf.String())
+		}
+
+		if !strings.Contains(buf.String(), "1234  |") {
+			t.Errorf("Expected '1234  |' to be in the output, got '%v'", buf.String())
+		}
+
+		if !strings.Contains(buf.String(), "12345 |") {
+			t.Errorf("Expected '12345 |' to be in the output, got '%v'", buf.String())
+		}
+	})
+
+	t.Run("Read Procfile with comments", func(t *testing.T) {
+		r, w, _ := os.Pipe()
+
+		stdOut := os.Stdout
+		stdErr := os.Stderr
+
+		os.Stdout = w
+		os.Stderr = w
+		t.Cleanup(func() {
+			os.Stdout = stdOut
+			os.Stderr = stdErr
+		})
+
+		procfile()
+
+		content := `
+		# This is my awesome comment for my first command.
+
+		# This command 'hello' will print a friendly 'Hello, world!'
+		hello: echo 'Hello, world!'
+
+		# This command is commented because won't be used
+		# bye: echo 'Bye!'`
+
+		os.WriteFile("Procfile", []byte(content), 0o644)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		if err := rebuilder.Serve(ctx); err != nil {
+			t.Errorf("Expected nil, got '%v'", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if strings.Count(buf.String(), "hello |") != 3 {
+			t.Errorf("Expected 'hello |' to be in the output, got '%v'", buf.String())
+		}
+
+		if strings.Contains(buf.String(), "bye") {
+			t.Errorf("Expected 'bye' to be commented, got '%v'", buf.String())
+		}
+	})
 }

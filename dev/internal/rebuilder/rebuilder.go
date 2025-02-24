@@ -14,8 +14,6 @@ func Serve(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Println("[kit] Starting app")
-
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 

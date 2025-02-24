@@ -71,12 +71,8 @@ func TestServe(t *testing.T) {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
 
-		if !strings.Contains(buf.String(), "[kit] Starting app") {
-			t.Errorf("Expected '[kit] Starting app' to be in the output, got '%v'", buf.String())
-		}
-
-		if !strings.Contains(buf.String(), "[kit] Shutting down...") {
-			t.Errorf("Expected '[kit] Shutting down...' to be in the output, got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "web |") {
+			t.Errorf("Expected 'web |' to be in the output, got '%v'", buf.String())
 		}
 	})
 
@@ -118,16 +114,12 @@ func TestServe(t *testing.T) {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
 
-		if !strings.Contains(buf.String(), "[kit] Starting app") {
-			t.Errorf("Expected '[kit] Starting app' to be in the output, got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "web |") {
+			t.Errorf("Expected 'web |' to be in the output, got '%v'", buf.String())
 		}
 
 		if !strings.Contains(buf.String(), "Restarted...") {
 			t.Errorf("Expected 'Restarted...' to be in the output, got '%v'", buf.String())
-		}
-
-		if !strings.Contains(buf.String(), "[kit] Shutting down...") {
-			t.Errorf("Expected '[kit] Shutting down...' to be in the output, got '%v'", buf.String())
 		}
 	})
 

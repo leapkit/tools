@@ -447,7 +447,7 @@ func TestServe(t *testing.T) {
 		# This command 'hello' will print a friendly 'Hello, world!'
 		hello: echo 'Hello, world!' # inline comment 1
 		bye: echo 'Bye!'# inline comment 2
-		#### Comment 3 # inline comment 3`
+		# inline-command: echo 'commented' # inline comment 3`
 
 		os.WriteFile("Procfile", []byte(content), 0o644)
 
@@ -470,8 +470,8 @@ func TestServe(t *testing.T) {
 			t.Errorf("Expected 'bye' to be commented, got '%v'", buf.String())
 		}
 
-		if strings.Contains(buf.String(), "inline command") {
-			t.Errorf("Expected output without 'inline command', got '%v'", buf.String())
+		if strings.Contains(buf.String(), "inline-command") {
+			t.Errorf("Expected output without 'inline-command', got '%v'", buf.String())
 		}
 	})
 }

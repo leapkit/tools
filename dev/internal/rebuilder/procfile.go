@@ -25,18 +25,23 @@ func readProcfile(path string) ([]entry, error) {
 	var entries []entry
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		parts := strings.SplitN(scanner.Text(), ":", 2)
+		line := strings.TrimSpace(scanner.Text())
+
+		// Ignore full-line comments
+		if strings.HasPrefix(line, "#") || line == "" {
+			continue
+		}
+
+		// Ignore inline comments
+		line = strings.SplitN(line, "#", 2)[0]
+
+		parts := strings.SplitN(line, ":", 2)
 		if len(parts) != 2 {
 			continue
 		}
 
 		for i := range parts {
 			parts[i] = strings.TrimSpace(parts[i])
-		}
-
-		// Skipping comments in Procfile
-		if strings.HasPrefix(parts[0], "#") {
-			continue
 		}
 
 		exists := slices.ContainsFunc(entries, func(e entry) bool {

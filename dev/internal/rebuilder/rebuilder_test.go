@@ -425,4 +425,53 @@ func TestServe(t *testing.T) {
 			t.Errorf("Expected 'bye' to be commented, got '%v'", buf.String())
 		}
 	})
+
+	t.Run("Read Procfile with inline comments", func(t *testing.T) {
+		r, w, _ := os.Pipe()
+
+		stdOut := os.Stdout
+		stdErr := os.Stderr
+
+		os.Stdout = w
+		os.Stderr = w
+		t.Cleanup(func() {
+			os.Stdout = stdOut
+			os.Stderr = stdErr
+		})
+
+		procfile()
+
+		content := `
+		# This is my awesome comment for my first command.
+
+		# This command 'hello' will print a friendly 'Hello, world!'
+		hello: echo 'Hello, world!' # inline comment 1
+		bye: echo 'Bye!'# inline comment 2
+		# inline-command: echo 'commented' # inline comment 3`
+
+		os.WriteFile("Procfile", []byte(content), 0o644)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
+		if err := rebuilder.Serve(ctx); err != nil {
+			t.Errorf("Expected nil, got '%v'", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if strings.Count(buf.String(), "hello |") != 3 {
+			t.Errorf("Expected 'hello |' to be in the output, got '%v'", buf.String())
+		}
+
+		if !strings.Contains(buf.String(), "bye") {
+			t.Errorf("Expected 'bye' to be commented, got '%v'", buf.String())
+		}
+
+		if strings.Contains(buf.String(), "inline-command") {
+			t.Errorf("Expected output without 'inline-command', got '%v'", buf.String())
+		}
+	})
 }

@@ -38,6 +38,8 @@ func Exec() error {
 		err := runMigrations(url)
 		if err != nil {
 			fmt.Printf("[error] %v\n", err)
+
+			return err
 		}
 
 		fmt.Println("✅ Migrations ran successfully")

@@ -1,7 +1,6 @@
 package jspm
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,28 +11,15 @@ import (
 
 const baseURL = "https://api.jspm.io/generate"
 
-type client struct {
-	env      string
-	provider string
-}
+type client struct{}
 
 // Generate return the the import maps for the given packages.
 func (c *client) Generate(ctx context.Context, packages ...string) (map[string]string, error) {
-	form := struct {
-		Install      []string `json:"install"`
-		Env          []string `json:"env"`
-		Provider     string   `json:"provider"`
-		FlattenScope string   `json:"flattenScope"`
-	}{
-		Install:      packages,
-		Env:          []string{"browser", "module", c.env},
-		FlattenScope: "true",
-		Provider:     c.provider,
-	}
+	form := fmt.Sprintf(`{"install": [%q], "env": ["browser", "production", "module"]}`,
+		strings.Join(packages, `", "`),
+	)
 
-	formBytes, _ := json.Marshal(&form)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL, bytes.NewReader(formBytes))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL, strings.NewReader(form))
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +33,8 @@ func (c *client) Generate(ctx context.Context, packages ...string) (map[string]s
 
 	b, _ := io.ReadAll(res.Body)
 
-	if strings.Contains(string(b), "error") {
-		return nil, fmt.Errorf("%s", string(b))
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("generate response error: %s", b)
 	}
 
 	var response struct {
@@ -66,29 +52,6 @@ func (c *client) Generate(ctx context.Context, packages ...string) (map[string]s
 	return response.Map.Imports, nil
 }
 
-type Option func(*client)
-
-func WithEnv(env string) Option {
-	return func(c *client) {
-		c.env = env
-	}
-}
-
-func WithProvider(provider string) Option {
-	return func(c *client) {
-		c.provider = provider
-	}
-}
-
-func Client(options ...Option) *client {
-	j := &client{
-		env:      "production",
-		provider: "jspm.io",
-	}
-
-	for _, option := range options {
-		option(j)
-	}
-
-	return j
+func Client() *client {
+	return new(client)
 }

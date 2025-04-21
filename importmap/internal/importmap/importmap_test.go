@@ -200,7 +200,6 @@ func TestImportMapPin(t *testing.T) {
 			t.Errorf("Expected %q, got %q", expectedErr, err.Error())
 		}
 	})
-
 }
 
 func TestImportMapUnpin(t *testing.T) {

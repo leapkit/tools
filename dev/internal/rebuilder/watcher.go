@@ -18,77 +18,50 @@ func init() {
 	pflag.StringVar(&watchExtensions, "watch.extensions", ".go", "Comma-separated list of file extensions to watch for changes and trigger recompilation (e.g. .go,.css,.js).")
 }
 
-type Watcher interface {
-	Watch(reload []chan bool)
+type watcher struct {
+	watcher *fsnotify.Watcher
 }
-
-type watcher struct{}
 
 func (w *watcher) Watch(reloadCh []chan bool) {
 	pflag.Parse()
 
-	watcher, err := fsnotify.NewWatcher()
+	var err error
+
+	w.watcher, err = fsnotify.NewWatcher()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating watcher: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[error] error creating watcher: %v\n", err)
 		return
 	}
-	defer watcher.Close()
 
-	watchPath := func(path string) error {
-		return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return watcher.Add(p)
-			}
-			return nil
-		})
-	}
+	defer w.watcher.Close()
 
-	if err := watchPath("."); err != nil {
-		fmt.Fprintf(os.Stderr, "error loading paths: %v\n", err)
-		return
-	}
+	w.add(".")
 
 	d := newDebounce()
 	defer d.timer.Stop()
 
 	for {
 		select {
-		case event, ok := <-watcher.Events:
+		case event, ok := <-w.watcher.Events:
 			if !ok {
 				return
 			}
 
 			if event.Has(fsnotify.Create) {
-				if info, err := os.Stat(event.Name); err == nil && info.IsDir() {
-					if err := watchPath(event.Name); err != nil {
-						fmt.Fprintf(os.Stderr, "error loading paths: %v\n", err)
-						return
-					}
-				}
+				w.add(event.Name)
 			}
 
-			if event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
-				if info, err := os.Stat(event.Name); os.IsNotExist(err) || (err == nil && info.IsDir()) {
-					_ = watcher.Remove(event.Name)
-
-					d.Trigger(reloadCh)
-				}
+			if event.Has(fsnotify.Remove) {
+				w.remove(event.Name)
 			}
 
 			if !slices.Contains(strings.Split(watchExtensions, ","), filepath.Ext(event.Name)) {
 				continue
 			}
 
-			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) ||
-				event.Has(fsnotify.Remove) || event.Has(fsnotify.Rename) {
+			d.Trigger(reloadCh)
 
-				d.Trigger(reloadCh)
-			}
-
-		case err, ok := <-watcher.Errors:
+		case err, ok := <-w.watcher.Errors:
 			if !ok {
 				return
 			}
@@ -97,38 +70,53 @@ func (w *watcher) Watch(reloadCh []chan bool) {
 	}
 }
 
-func newDebounce() *debounce {
-	delay := 100 * time.Millisecond
+func (w *watcher) add(path string) {
+	filepath.WalkDir(path, func(dir string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 
+		if !entry.IsDir() {
+			return nil
+		}
+
+		w.watcher.Add(dir)
+
+		return nil
+	})
+}
+
+func (w *watcher) remove(path string) {
+	filepath.WalkDir(path, func(dir string, _ os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		w.watcher.Remove(dir)
+
+		return nil
+	})
+}
+
+func newDebounce() *debounce {
 	return &debounce{
-		timer: time.NewTimer(delay),
-		delay: delay,
+		delay: 100 * time.Millisecond,
 	}
 }
 
 type debounce struct {
-	timer     *time.Timer
-	delay     time.Duration
-	lastEvent time.Time
+	timer *time.Timer
+	delay time.Duration
 }
 
 func (d *debounce) Trigger(reloadCh []chan bool) {
-	now := time.Now()
-	if now.Sub(d.lastEvent) > d.delay {
+	if d.timer != nil {
+		d.timer.Stop()
+	}
+
+	d.timer = time.AfterFunc(d.delay, func() {
 		for _, ch := range reloadCh {
-			select {
-			case ch <- true:
-			default:
-			}
+			ch <- true
 		}
-
-		d.lastEvent = now
-		return
-	}
-
-	if !d.timer.Stop() {
-		<-d.timer.C
-	}
-
-	d.timer.Reset(d.delay)
+	})
 }

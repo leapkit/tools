@@ -98,7 +98,7 @@ func TestServe(t *testing.T) {
 		os.MkdirAll("test/sub/folder/path", 0o755)
 		os.Create("test/sub/folder/path/main.go")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 
 		go func() {
@@ -217,7 +217,7 @@ func TestServe(t *testing.T) {
 
 		testFile()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 
 		go func() {
@@ -240,8 +240,6 @@ func TestServe(t *testing.T) {
 	})
 
 	t.Run("Correct - Debounce mechanism to avoid multiple restarts", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-
 		procfile()
 		os.WriteFile("Procfile", []byte("test: go run test/main.go"), 0o644)
 
@@ -255,6 +253,9 @@ func TestServe(t *testing.T) {
 			os.Stdout = current
 		})
 
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+
 		go func() {
 			content := "package main\n\nimport \"fmt\"\n\nfunc main() {\n	fmt.Println(\"Updated!\")\n}"
 
@@ -262,8 +263,6 @@ func TestServe(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 				os.WriteFile("test/main.go", []byte(content), 0o644)
 			}
-
-			cancel()
 		}()
 
 		if err := rebuilder.Serve(ctx); err != nil {

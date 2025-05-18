@@ -1,12 +1,12 @@
 package jspm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 const baseURL = "https://api.jspm.io/generate"
@@ -15,11 +15,17 @@ type client struct{}
 
 // Generate return the the import maps for the given packages.
 func (c *client) Generate(ctx context.Context, packages ...string) (map[string]string, error) {
-	form := fmt.Sprintf(`{"install": [%q], "env": ["browser", "production", "module"]}`,
-		strings.Join(packages, `", "`),
-	)
+	payload := map[string]any{
+		"install": packages,
+		"env":     []string{"browser", "production", "module"},
+	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL, strings.NewReader(form))
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}

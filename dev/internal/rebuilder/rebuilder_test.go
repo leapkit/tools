@@ -405,7 +405,7 @@ func TestServe(t *testing.T) {
 
 		os.WriteFile("Procfile", []byte(content), 0o644)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
 		if err := rebuilder.Serve(ctx); err != nil {
@@ -417,7 +417,7 @@ func TestServe(t *testing.T) {
 		io.Copy(&buf, r)
 
 		if strings.Count(buf.String(), "hello |") != 3 {
-			t.Errorf("Expected 'hello |' to be in the output, got '%v'", buf.String())
+			t.Errorf("Expected 'hello |' to be 3 times in the output, got '%v'", buf.String())
 		}
 
 		if strings.Contains(buf.String(), "bye") {

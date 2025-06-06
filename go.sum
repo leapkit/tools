@@ -10,5 +10,7 @@ go.leapkit.dev/core v0.1.2 h1:zwa70n3vc/LwR3I15MxrgaG/iVHz66S1EP5ihe9Zkxg=
 go.leapkit.dev/core v0.1.2/go.mod h1:Q//TSW//Gl2w57/OFe9HkUM1NiEt4VGUqi4gJX17KWo=
 go.leapkit.dev/core v0.1.4 h1:sav7m6Kyf0PYwieKS3gES2P9ktS3jRqvN4YCtQG1ftA=
 go.leapkit.dev/core v0.1.4/go.mod h1:Q//TSW//Gl2w57/OFe9HkUM1NiEt4VGUqi4gJX17KWo=
+go.leapkit.dev/core v0.1.8 h1:w5zJMZLAp50FflPq0Ld3CUyc7s70pgTvLx9QePdcrBY=
+go.leapkit.dev/core v0.1.8/go.mod h1:nRT9gt5MX7YVstBvURVgjyp+5LE76kEemZiAiyZqfSU=
 golang.org/x/sys v0.21.0 h1:rF+pYz3DAGSQAxAu1CbC7catZg4ebC4UIeIhKxBZvws=
 golang.org/x/sys v0.21.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=

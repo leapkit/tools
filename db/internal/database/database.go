@@ -37,8 +37,6 @@ func Exec() error {
 	case "migrate":
 		err := runMigrations(url)
 		if err != nil {
-			fmt.Printf("[error] %v\n", err)
-
 			return err
 		}
 

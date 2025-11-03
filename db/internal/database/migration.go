@@ -43,7 +43,7 @@ func newMigration(name string) error {
 
 	// Destination file name
 	fileName = filepath.Join(migrationFolder, fileName)
-	err = os.MkdirAll(filepath.Dir(fileName), 0700)
+	err = os.MkdirAll(filepath.Dir(fileName), 0o700)
 	if err != nil {
 		return fmt.Errorf("error creating migrations folder: %w", err)
 	}
@@ -78,7 +78,7 @@ func runMigrations(url string) error {
 
 	err = db.RunMigrationsDir(migrationFolder, conn)
 	if err != nil {
-		return fmt.Errorf("error running migrations: %w", err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil

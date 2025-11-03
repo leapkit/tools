@@ -10,7 +10,8 @@ import (
 func main() {
 	err := database.Exec()
 	if err != nil {
-		fmt.Printf("[error] %v\n", err)
+		fmt.Printf("%v\n", err)
+		fmt.Println("❌ Operation failed.")
 
 		// Exit with error code 1 to signal failure
 		// on requested operation.

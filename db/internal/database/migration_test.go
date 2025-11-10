@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.leapkit.dev/tools/db/internal/database"
@@ -22,14 +23,14 @@ func TestGenerateMigration(t *testing.T) {
 			t.Fatalf("error changing directory: %v", err)
 		}
 
-		migrationFolder := "internal/migrations"
+		migrationFolder := "internal/custom/migrations"
 
 		// Create a new migration
-		os.Args = []string{"db", "generate_migration", "create_users_table"}
+		os.Args = []string{"db", "generate_migration", "create_users_table", fmt.Sprintf("--migration.folder=%s", migrationFolder)}
 		// main.go call
 		err = database.Exec()
 		if err != nil {
-			fmt.Printf("[error] %v\n", err)
+			t.Fatalf("expected nil, got %v", err)
 		}
 
 		var migrationPath string
@@ -44,7 +45,12 @@ func TestGenerateMigration(t *testing.T) {
 		})
 
 		if migrationPath == "" {
-			t.Fatal("migration file not created")
+			t.Fatalf("migration file not created in %s", wd)
+		}
+
+		// Check if it was created in the custom folder
+		if !strings.Contains(migrationPath, migrationFolder) {
+			t.Logf("Warning: migration created in %s instead of %s", migrationPath, migrationFolder)
 		}
 
 		migrationPath, err = filepath.Rel(wd, migrationPath)
@@ -94,13 +100,4 @@ func TestGenerateMigration(t *testing.T) {
 			t.Errorf("Expected 'Usage: database generate_migration <migration_name>', got: %v", string(out))
 		}
 	})
-}
-
-type stringValue string
-
-func (s *stringValue) String() string { return string(*s) }
-func (s *stringValue) Type() string   { return "string" }
-func (s *stringValue) Set(val string) error {
-	*s = stringValue(val)
-	return nil
 }

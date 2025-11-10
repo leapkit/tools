@@ -79,7 +79,7 @@ func runMigrations(url string) error {
 
 	err = db.RunMigrationsDir(migrationFolder, conn)
 	if err != nil {
-		return fmt.Errorf("error running migrations: %w", err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil

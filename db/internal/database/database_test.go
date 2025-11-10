@@ -20,7 +20,7 @@ func TestMigrate(t *testing.T) {
 		{
 			name:            "No migrations folder",
 			url:             "file::memory:?cache=shared",
-			output:          "[error] error running migrations: error walking migrations directory: lstat internal/migrations: no such file or directory\n",
+			output:          "[error] error walking migrations directory: lstat internal/migrations: no such file or directory\n",
 			migrationFolder: false,
 		},
 
@@ -169,7 +169,7 @@ func TestReset(t *testing.T) {
 		{
 			name:            "No migrations folder",
 			url:             "test.db",
-			output:          "[error] error running migrations: error walking migrations directory: lstat internal/migrations: no such file or directory\n",
+			output:          "[error] error walking migrations directory: lstat internal/migrations: no such file or directory\n",
 			migrationFolder: false,
 		},
 

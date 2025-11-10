@@ -3,13 +3,14 @@ package database
 import (
 	"database/sql"
 	_ "embed"
-	"flag"
 	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	"go.leapkit.dev/core/db"
 )
@@ -43,7 +44,7 @@ func newMigration(name string) error {
 
 	// Destination file name
 	fileName = filepath.Join(migrationFolder, fileName)
-	err = os.MkdirAll(filepath.Dir(fileName), 0o700)
+	err = os.MkdirAll(migrationFolder, 0o700)
 	if err != nil {
 		return fmt.Errorf("error creating migrations folder: %w", err)
 	}

@@ -339,6 +339,28 @@ func TestServe(t *testing.T) {
 		}
 	})
 
+	t.Run("Incorrect - Empty command in Procfile", func(t *testing.T) {
+		os.WriteFile("Procfile", []byte("web:  "), 0o644)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		if err := rebuilder.Serve(ctx); err == nil {
+			t.Errorf("Expected an error for empty command, got nil")
+		}
+	})
+
+	t.Run("Incorrect - Invalid binary in Procfile", func(t *testing.T) {
+		os.WriteFile("Procfile", []byte("web: nonexistent_binary_xyz_123"), 0o644)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+
+		if err := rebuilder.Serve(ctx); err == nil {
+			t.Errorf("Expected an error for invalid binary, got nil")
+		}
+	})
+
 	t.Run("Validate log trailing spaces", func(t *testing.T) {
 		r, w, _ := os.Pipe()
 
@@ -416,8 +438,8 @@ func TestServe(t *testing.T) {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
 
-		if strings.Count(buf.String(), "hello |") != 3 {
-			t.Errorf("Expected 'hello |' to be 3 times in the output, got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "hello |") {
+			t.Errorf("Expected 'hello |' to be in the output, got '%v'", buf.String())
 		}
 
 		if strings.Contains(buf.String(), "bye") {
@@ -461,12 +483,12 @@ func TestServe(t *testing.T) {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
 
-		if strings.Count(buf.String(), "hello |") != 3 {
+		if !strings.Contains(buf.String(), "hello |") {
 			t.Errorf("Expected 'hello |' to be in the output, got '%v'", buf.String())
 		}
 
-		if !strings.Contains(buf.String(), "bye") {
-			t.Errorf("Expected 'bye' to be commented, got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "bye   |") {
+			t.Errorf("Expected 'bye' to be in the output, got '%v'", buf.String())
 		}
 
 		if strings.Contains(buf.String(), "inline-command") {

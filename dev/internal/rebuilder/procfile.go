@@ -22,6 +22,8 @@ func readProcfile(path string) ([]entry, error) {
 
 	defer f.Close()
 
+	maxServiceNameLen = 0
+
 	var entries []entry
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {

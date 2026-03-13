@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 )
 
 func newProcess(e entry) *process {
@@ -26,67 +25,67 @@ type process struct {
 
 func (p *process) Run(parentCtx context.Context, reload chan bool) error {
 	fields := strings.Fields(p.Command)
+	if len(fields) == 0 {
+		return fmt.Errorf("empty command for process %q", p.Name)
+	}
+
 	name, args := fields[0], fields[1:]
 
 	var restarted bool
 
 	for {
 		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
 
 		cmd := exec.CommandContext(ctx, name, args...)
 
 		cmd.Stdout = p.Stdout
 		cmd.Stderr = p.Stderr
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		setSysProcAttr(cmd)
 
 		if restarted {
 			fmt.Fprintln(p.Stdout, "Restarted...")
 		}
 
 		if err := cmd.Start(); err != nil {
+			cancel()
 			fmt.Fprintf(p.Stderr, "failed to start process: %v\n", err)
 			return err
 		}
 
 		errCh := make(chan error, 1)
 		go func() {
-			if err := cmd.Wait(); err != nil {
-				errCh <- err
-			}
+			errCh <- cmd.Wait()
 		}()
 
 		select {
 		case <-reload:
-			if err := Signal(cmd, syscall.SIGTERM); err != nil {
+			if err := terminateProcess(cmd); err != nil {
 				fmt.Fprintf(p.Stdout, "error restarting process: %v\n", err)
 			}
+			<-errCh
 		case <-parentCtx.Done():
 			fmt.Fprintln(p.Stdout, "Stopping...")
-			if err := Signal(cmd, syscall.SIGTERM); err != nil {
+			if err := terminateProcess(cmd); err != nil {
 				fmt.Fprintf(p.Stdout, "error stopping process: %v\n", err)
 			}
+			<-errCh
 
+			cancel()
 			return nil
 		case err := <-errCh:
-			fmt.Fprintf(p.Stderr, "process exited with error: %v\n", err)
+			if err != nil {
+				fmt.Fprintf(p.Stderr, "process exited with error: %v\n", err)
+			}
 
 			select {
 			case <-reload:
 			case <-parentCtx.Done():
+				cancel()
 				return nil
 			}
 		}
 
+		cancel()
 		restarted = true
 	}
-}
-
-func Signal(cmd *exec.Cmd, s syscall.Signal) error {
-	group, err := os.FindProcess(-cmd.Process.Pid)
-	if err != nil {
-		return err
-	}
-
-	return group.Signal(s)
 }

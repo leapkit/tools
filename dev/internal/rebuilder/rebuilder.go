@@ -2,9 +2,6 @@ package rebuilder
 
 import (
 	"context"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func Serve(ctx context.Context) error {
@@ -13,25 +10,31 @@ func Serve(ctx context.Context) error {
 		return err
 	}
 
-	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := notifyContext(ctx)
 	defer cancel()
 
 	reloadCh := make([]chan bool, len(entries))
-	exitCh := make(chan error, len(entries))
-
-	go new(watcher).Watch(reloadCh)
-	for i, e := range entries {
+	for i := range reloadCh {
 		reloadCh[i] = make(chan bool)
+	}
+
+	errCh := make(chan error, len(entries))
+
+	go new(watcher).Watch(ctx, reloadCh)
+	for i, e := range entries {
 		go func() {
-			exitCh <- newProcess(e).Run(ctx, reloadCh[i])
+			errCh <- newProcess(e).Run(ctx, reloadCh[i])
 		}()
 	}
 
 	<-ctx.Done()
 
+	var wErr error
 	for range entries {
-		<-exitCh
+		if err := <-errCh; err != nil && wErr == nil {
+			wErr = err
+		}
 	}
 
-	return nil
+	return wErr
 }

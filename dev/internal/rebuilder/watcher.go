@@ -1,6 +1,7 @@
 package rebuilder
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,9 +23,7 @@ type watcher struct {
 	watcher *fsnotify.Watcher
 }
 
-func (w *watcher) Watch(reloadCh []chan bool) {
-	pflag.Parse()
-
+func (w *watcher) Watch(ctx context.Context, reloadCh []chan bool) {
 	var err error
 
 	w.watcher, err = fsnotify.NewWatcher()
@@ -37,11 +36,14 @@ func (w *watcher) Watch(reloadCh []chan bool) {
 
 	w.add(".")
 
+	extensions := strings.Split(watchExtensions, ",")
 	d := newDebounce()
-	defer d.timer.Stop()
+	defer d.Stop()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case event, ok := <-w.watcher.Events:
 			if !ok {
 				return
@@ -55,11 +57,11 @@ func (w *watcher) Watch(reloadCh []chan bool) {
 				w.remove(event.Name)
 			}
 
-			if !slices.Contains(strings.Split(watchExtensions, ","), filepath.Ext(event.Name)) {
+			if !slices.Contains(extensions, filepath.Ext(event.Name)) {
 				continue
 			}
 
-			d.Trigger(reloadCh)
+			d.Trigger(ctx, reloadCh)
 
 		case err, ok := <-w.watcher.Errors:
 			if !ok {
@@ -109,14 +111,24 @@ type debounce struct {
 	delay time.Duration
 }
 
-func (d *debounce) Trigger(reloadCh []chan bool) {
+func (d *debounce) Stop() {
+	if d.timer != nil {
+		d.timer.Stop()
+	}
+}
+
+func (d *debounce) Trigger(ctx context.Context, reloadCh []chan bool) {
 	if d.timer != nil {
 		d.timer.Stop()
 	}
 
 	d.timer = time.AfterFunc(d.delay, func() {
 		for _, ch := range reloadCh {
-			ch <- true
+			select {
+			case ch <- true:
+			case <-ctx.Done():
+				return
+			}
 		}
 	})
 }

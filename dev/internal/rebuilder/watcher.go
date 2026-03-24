@@ -13,10 +13,14 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var watchExtensions string
+var (
+	watchExtensions string
+	debugMode       bool
+)
 
 func init() {
 	pflag.StringVar(&watchExtensions, "watch.extensions", ".go", "Comma-separated list of file extensions to watch for changes and trigger recompilation (e.g. .go,.css,.js).")
+	pflag.BoolVar(&debugMode, "watch.debug", false, "When this flag is true, you will see the changes that trigger the recompilation.")
 }
 
 type watcher struct {
@@ -59,6 +63,10 @@ func (w *watcher) Watch(ctx context.Context, reloadCh []chan bool) {
 
 			if !slices.Contains(extensions, filepath.Ext(event.Name)) {
 				continue
+			}
+
+			if debugMode {
+				fmt.Printf("operation: %v, path: %q\n", event.Op.String(), event.Name)
 			}
 
 			d.Trigger(ctx, reloadCh)

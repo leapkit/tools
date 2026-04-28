@@ -13,8 +13,30 @@ const baseURL = "https://api.jspm.io/generate"
 
 type client struct{}
 
+// GeneratorResult contains the imports, scopes, and staticDeps returned by JSPM.
+type GeneratorResult struct {
+	Imports    map[string]string
+	Scopes     map[string]map[string]string
+	StaticDeps []string
+}
+
+// GetImports returns the imports map.
+func (r *GeneratorResult) GetImports() map[string]string {
+	return r.Imports
+}
+
+// GetScopes returns the scopes map.
+func (r *GeneratorResult) GetScopes() map[string]map[string]string {
+	return r.Scopes
+}
+
+// GetStaticDeps returns the static dependencies list.
+func (r *GeneratorResult) GetStaticDeps() []string {
+	return r.StaticDeps
+}
+
 // Generate return the the import maps for the given packages.
-func (c *client) Generate(ctx context.Context, packages ...string) (map[string]string, error) {
+func (c *client) Generate(ctx context.Context, packages ...string) (any, error) {
 	payload := map[string]any{
 		"install": packages,
 		"env":     []string{"browser", "production", "module"},
@@ -47,7 +69,8 @@ func (c *client) Generate(ctx context.Context, packages ...string) (map[string]s
 		StaticDeps  []string `json:"staticDeps"`
 		DynamicDeps []string `json:"dynamicDeps"`
 		Map         struct {
-			Imports map[string]string `json:"imports"`
+			Imports map[string]string            `json:"imports"`
+			Scopes  map[string]map[string]string `json:"scopes"`
 		} `json:"map"`
 	}
 
@@ -55,7 +78,11 @@ func (c *client) Generate(ctx context.Context, packages ...string) (map[string]s
 		return nil, fmt.Errorf("error decoding response body: %w", err)
 	}
 
-	return response.Map.Imports, nil
+	return &GeneratorResult{
+		Imports:    response.Map.Imports,
+		Scopes:     response.Map.Scopes,
+		StaticDeps: response.StaticDeps,
+	}, nil
 }
 
 func Client() *client {

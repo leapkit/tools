@@ -10,9 +10,17 @@ import (
 	"strings"
 )
 
+// GeneratorResult contains the imports, scopes, and staticDeps returned by a package generator.
+type GeneratorResult interface {
+	GetImports() map[string]string
+	GetScopes() map[string]map[string]string
+	GetStaticDeps() []string
+}
+
 // Generator defines an interface for generating a map of dependencies from a list of packages.
+// It returns a result that can provide imports and scopes for the given packages.
 type Generator interface {
-	Generate(context.Context, ...string) (map[string]string, error)
+	Generate(context.Context, ...string) (any, error)
 }
 
 // Auditor provides methods for analyzing dependencies for known vulnerabilities
@@ -23,7 +31,8 @@ type Auditor interface {
 }
 
 type modules struct {
-	Map map[string]string `json:"imports"`
+	Map    map[string]string            `json:"imports"`
+	Scopes map[string]map[string]string `json:"scopes,omitempty"`
 }
 
 func (m *modules) Bytes() []byte {
@@ -63,7 +72,8 @@ func NewManager(containerFolder string, generator Generator, auditor Auditor) *m
 	m := &manager{
 		containerFolder: containerFolder,
 		modules: modules{
-			Map: make(map[string]string),
+			Map:    make(map[string]string),
+			Scopes: make(map[string]map[string]string),
 		},
 		auditor:   auditor,
 		generator: generator,

@@ -6,37 +6,56 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 func (m *manager) Unpin(ctx context.Context, packages ...string) error {
 	for _, pkg := range packages {
 		url, ok := m.modules.Map[pkg]
 		if !ok {
+			fmt.Printf("[warn] package %s not pinned\n", pkg)
 			continue
 		}
 
-		// vendor/pkg@1.2.3.js -> 1.2.3
-		pkgVersionReg := regexp.MustCompile(`.+@([\d\.]+).js$`)
-
-		var version string
-		if match := pkgVersionReg.FindStringSubmatch(url); len(match) == 2 {
-			version += "@" + match[1]
+		pkgDir, version := extractPackageDirAndVersion(url)
+		if pkgDir == "" {
+			fmt.Printf("[warn] invalid package path: %s\n", url)
+			continue
 		}
 
-		fmt.Println("[info] unpinning", pkg+version)
+		fmt.Printf("[info] unpinning %s@%s\n", pkg, version)
 
-		pkgPath := strings.TrimPrefix(m.modules.Map[pkg], "vendor/")
-		parts := strings.Split(pkgPath, "/")
-
-		os.RemoveAll(filepath.Join(m.containerFolder, "vendor", parts[0]))
-
+		// 1. Remove from imports
 		delete(m.modules.Map, pkg)
+
+		// 2. Remove scope for this package
+		// Scope key format: "vendor/@org/package@1.2.3/"
+		scopeKey := pkgDir + "/"
+		delete(m.modules.Scopes, scopeKey)
+
+		// 3. Delete entire package directory
+		fullPath := filepath.Join(m.containerFolder, pkgDir)
+		if err := os.RemoveAll(fullPath); err != nil {
+			fmt.Printf("[warn] failed to delete %s: %v\n", pkgDir, err)
+		} else {
+			fmt.Printf("[info] deleted %s\n", pkgDir)
+		}
 	}
 
-	if err := m.write(); err != nil {
-		return err
+	return m.write()
+}
+
+// extractPackageDirAndVersion extracts package directory and version from vendor path
+// "vendor/@org/package@1.2.3/dist/index.js" → "vendor/@org/package@1.2.3", "1.2.3"
+// "vendor/pkg@4.5.6/index.js" → "vendor/pkg@4.5.6", "4.5.6"
+func extractPackageDirAndVersion(vendorPath string) (pkgDir, version string) {
+	// Match pattern: vendor/[optional @org/]package@version/...
+	// Capture everything up to and including @version
+	re := regexp.MustCompile(`^(vendor/(?:@[^/]+/)?[^/@]+@([\d\.]+))`)
+	matches := re.FindStringSubmatch(vendorPath)
+
+	if len(matches) < 3 {
+		return "", ""
 	}
 
-	return nil
+	return matches[1], matches[2]
 }

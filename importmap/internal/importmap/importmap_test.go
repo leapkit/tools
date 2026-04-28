@@ -242,8 +242,8 @@ func TestImportMapUnpin(t *testing.T) {
 			t.Errorf("Expected %q, got %q", expected, current)
 		}
 
-		if _, err := os.Stat("vendor/pkg@1.0.0.js"); !os.IsNotExist(err) {
-			t.Errorf("Expected no exits file, got %v", err)
+		if _, err := os.Stat("vendor/pkg@1.0.0.js"); err != nil {
+			t.Errorf("Expected file to still exist, got error %v", err)
 		}
 	})
 
@@ -330,10 +330,10 @@ func TestImportMapPristine(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	currentImportmap := `{ "imports": { "pkg": "vendor/pkg@1.0.0.js" } }`
+	currentImportMap := `{ "imports": { "pkg": "vendor/pkg@1.0.0.js" } }`
 
 	f, _ := os.Create("importmap.json")
-	f.WriteString(currentImportmap)
+	f.WriteString(currentImportMap)
 	f.Close()
 
 	if _, err := os.Stat("vendor/pkg@1.0.0.js"); !os.IsNotExist(err) {
@@ -693,6 +693,206 @@ func TestImportMapOutdated(t *testing.T) {
 			t.Errorf("Expected error, got nil")
 		}
 	})
+}
+
+func TestImportMapScopes(t *testing.T) {
+	os.Chdir(t.TempDir())
+
+	http.DefaultClient = &http.Client{
+		Transport: &mockedRoundTripper{},
+	}
+
+	t.Cleanup(func() {
+		http.DefaultClient = &http.Client{}
+		os.Remove("importmap.json")
+		os.RemoveAll("vendor")
+	})
+
+	// Create a mock generator that returns scopes
+	mockGenWithScopes := &mockGeneratorWithScopes{}
+	mockAuditor := &mockAuditor{}
+
+	ctx := context.Background()
+
+	t.Run("correct pinning a package with scopes", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
+		err := m.Pin(ctx, "@org/package-main")
+		if err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		jsonBytes := m.JSON()
+		jsonStr := string(jsonBytes)
+
+		if !strings.Contains(jsonStr, "@org/package-main") {
+			t.Error("Expected @org/package-main in JSON")
+		}
+
+		if !strings.Contains(jsonStr, "scopes") {
+			t.Error("Expected scopes field in JSON")
+		}
+
+		if !strings.Contains(jsonStr, "vendor/") {
+			t.Error("Expected vendor/ paths in scopes")
+		}
+
+		if !strings.Contains(jsonStr, "@org/package-dep/utils") {
+			t.Error("Expected @org/package-dep/utils in scopes")
+		}
+	})
+
+	t.Run("unpinning a package removes it from imports", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
+		m.Pin(ctx, "@org/package-main")
+
+		// Verify scope exists before unpin
+		jsonBefore := string(m.JSON())
+		if !strings.Contains(jsonBefore, "scopes") {
+			t.Fatal("Expected scopes before unpin")
+		}
+
+		err := m.Unpin(ctx, "@org/package-main")
+		if err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		jsonAfter := string(m.JSON())
+		if strings.Contains(jsonAfter, "@org/package-main") {
+			t.Error("Expected @org/package-main to be removed from imports")
+		}
+	})
+
+	t.Run("JSON omits empty scopes", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		m := importmap.NewManager(".", &mockGenerator{}, mockAuditor)
+		m.Pin(ctx, "pkg")
+
+		jsonBytes := m.JSON()
+		jsonStr := string(jsonBytes)
+
+		// Should not contain "scopes" field if empty
+		if strings.Contains(jsonStr, "scopes") {
+			t.Errorf("Expected JSON to omit empty scopes field, got: %s", jsonStr)
+		}
+	})
+
+	t.Run("JSON includes scopes when present", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
+		m.Pin(ctx, "@org/package-main")
+
+		jsonBytes := m.JSON()
+		jsonStr := string(jsonBytes)
+
+		// Should contain "scopes" field
+		if !strings.Contains(jsonStr, "scopes") {
+			t.Errorf("Expected JSON to include scopes field, got: %s", jsonStr)
+		}
+	})
+
+	t.Run("downloads staticDeps including special _/ files", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		mockGenWithStaticDeps := &mockGeneratorWithStaticDeps{}
+		m := importmap.NewManager(".", mockGenWithStaticDeps, mockAuditor)
+
+		err := m.Pin(ctx, "@org/package-ext")
+		if err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		// Verify the _/ file was downloaded at the organization level
+		if _, err := os.Stat("vendor/@org/_/xyz789.js"); err != nil {
+			t.Errorf("Expected vendor/@org/_/xyz789.js file to exist at org level, got error: %v", err)
+		}
+
+		// Verify the main package file was downloaded
+		if _, err := os.Stat("vendor/@org/package-ext@2.5.0.js"); err != nil {
+			t.Errorf("Expected main package file to exist, got error: %v", err)
+		}
+
+		// CRITICAL: Verify staticDeps are in the importmap.json scopes
+		jsonBytes := m.JSON()
+		jsonStr := string(jsonBytes)
+
+		if !strings.Contains(jsonStr, "scopes") {
+			t.Error("Expected scopes field in JSON")
+		}
+
+		// Check that the _/ file is in the scopes
+		if !strings.Contains(jsonStr, "_/xyz789.js") {
+			t.Errorf("Expected _/xyz789.js in scopes, got: %s", jsonStr)
+		}
+
+		// Check that it points to the organization level
+		if !strings.Contains(jsonStr, "vendor/@org/_/xyz789.js") {
+			t.Errorf("Expected vendor/@org/_/xyz789.js path in scopes (at org level), got: %s", jsonStr)
+		}
+	})
+}
+
+// mockGeneratorWithStaticDeps returns imports with staticDeps including _/ files
+type mockGeneratorWithStaticDeps struct{}
+
+func (g *mockGeneratorWithStaticDeps) Generate(ctx context.Context, packages ...string) (interface{}, error) {
+	imports := map[string]string{
+		"@org/package-ext": "https://ga.jspm.io/npm:@org/package-ext@2.5.0/dist/index.js",
+	}
+
+	staticDeps := []string{
+		"https://ga.jspm.io/npm:@org/package-base@1.5.0/_/xyz789.js",
+		"https://ga.jspm.io/npm:@org/package-base@1.5.0/runtime/index.js",
+		"https://ga.jspm.io/npm:@org/package-ext@2.5.0/dist/index.js",
+	}
+
+	return &mockGeneratorResult{
+		imports:    imports,
+		scopes:     make(map[string]map[string]string),
+		staticDeps: staticDeps,
+	}, nil
+}
+
+// mockGeneratorWithScopes returns both imports and scopes
+type mockGeneratorWithScopes struct{}
+
+func (g *mockGeneratorWithScopes) Generate(ctx context.Context, packages ...string) (interface{}, error) {
+	imports := map[string]string{
+		"@org/package-main": "https://ga.jspm.io/npm:@org/package-main@1.2.0/dist/index.js",
+	}
+
+	scopes := map[string]map[string]string{
+		"https://ga.jspm.io/": {
+			"@org/package-dep/utils": "https://ga.jspm.io/npm:@org/package-dep@2.3.0/dist/utils/index.js",
+			"package-helper":         "https://ga.jspm.io/npm:package-helper@3.1.0/dist/index.js",
+		},
+	}
+
+	return &mockGeneratorResult{
+		imports:    imports,
+		scopes:     scopes,
+		staticDeps: []string{}, // Empty by default
+	}, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -1275,9 +1475,27 @@ func (a *mockAuditor) Outdated(ctx context.Context, packages map[string]string) 
 	return outdated, nil
 }
 
+type mockGeneratorResult struct {
+	imports    map[string]string
+	scopes     map[string]map[string]string
+	staticDeps []string
+}
+
+func (r *mockGeneratorResult) GetImports() map[string]string {
+	return r.imports
+}
+
+func (r *mockGeneratorResult) GetScopes() map[string]map[string]string {
+	return r.scopes
+}
+
+func (r *mockGeneratorResult) GetStaticDeps() []string {
+	return r.staticDeps
+}
+
 type mockGenerator struct{}
 
-func (g *mockGenerator) Generate(ctx context.Context, packages ...string) (map[string]string, error) {
+func (g *mockGenerator) Generate(ctx context.Context, packages ...string) (interface{}, error) {
 	if ctx.Value("generate_no_exists") != nil {
 		pkg := "pkg"
 		if len(packages) > 0 {
@@ -1306,7 +1524,12 @@ func (g *mockGenerator) Generate(ctx context.Context, packages ...string) (map[s
 		m[matches[1]] = fmt.Sprintf("https://ga.jspm.io/npm:%s/index.js", p)
 	}
 
-	return m, nil
+	// Return mock result with empty scopes and staticDeps for now
+	return &mockGeneratorResult{
+		imports:    m,
+		scopes:     make(map[string]map[string]string),
+		staticDeps: []string{}, // Empty by default
+	}, nil
 }
 
 type mockedRoundTripper struct{}

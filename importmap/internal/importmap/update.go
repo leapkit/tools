@@ -7,7 +7,7 @@ import (
 )
 
 func (m *manager) Update(ctx context.Context) error {
-	pkgReg := regexp.MustCompile(`\/.+@([\d\.]+).js$`)
+	pkgReg := regexp.MustCompile(`\/.+@([\d\.]+)\/`)
 	pkgVersion := map[string]string{}
 	for pkg, url := range m.modules.Map {
 		if !strings.HasPrefix(url, "vendor/") {

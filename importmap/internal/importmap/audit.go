@@ -9,7 +9,7 @@ import (
 )
 
 func (m *manager) Audit(ctx context.Context) error {
-	pkgReg := regexp.MustCompile(`\/.+@([\d\.]+).js$`)
+	pkgReg := regexp.MustCompile(`\/([^/@]+)@([\d\.]+)\/`)
 	pkgVersion := map[string]string{}
 	for pkg, url := range m.modules.Map {
 		if !strings.HasPrefix(url, "vendor/") {
@@ -17,11 +17,11 @@ func (m *manager) Audit(ctx context.Context) error {
 		}
 
 		match := pkgReg.FindStringSubmatch(url)
-		if len(match) != 2 {
+		if len(match) != 3 {
 			continue
 		}
 
-		pkgVersion[pkg] = match[1]
+		pkgVersion[pkg] = match[2]
 	}
 
 	if len(pkgVersion) == 0 {
@@ -60,7 +60,7 @@ func (m *manager) Audit(ctx context.Context) error {
 }
 
 func (m *manager) OutdatedPackages(ctx context.Context) error {
-	pkgReg := regexp.MustCompile(`\/.+@([\d\.]+).js$`)
+	pkgReg := regexp.MustCompile(`\/([^/@]+)@([\d\.]+)\/`)
 	pkgVersion := map[string]string{}
 	for pkg, url := range m.modules.Map {
 		if !strings.HasPrefix(url, "vendor/") {
@@ -68,11 +68,11 @@ func (m *manager) OutdatedPackages(ctx context.Context) error {
 		}
 
 		match := pkgReg.FindStringSubmatch(url)
-		if len(match) != 2 {
+		if len(match) != 3 {
 			continue
 		}
 
-		pkgVersion[pkg] = match[1]
+		pkgVersion[pkg] = match[2]
 	}
 
 	outdated, err := m.auditor.Outdated(ctx, pkgVersion)

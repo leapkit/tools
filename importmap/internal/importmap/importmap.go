@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/pflag"
-	"go.leapkit.dev/tools/importmap/internal/jspm"
+	"go.leapkit.dev/tools/importmap/internal/bundlejs"
 	"go.leapkit.dev/tools/importmap/internal/npm"
 )
 
@@ -46,7 +46,7 @@ func Process(ctx context.Context) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	m := NewManager(containerFolder, jspm.Client(), npm.Client())
+	m := NewManager(containerFolder, new(bundlejs.Client), npm.Client())
 
 	switch args[0] {
 	case "pin":

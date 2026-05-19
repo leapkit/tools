@@ -12,12 +12,12 @@ func (m *manager) Pristine(ctx context.Context) error {
 	var pkg []string
 	unique := make(map[string]bool)
 
-	for _, url := range m.modules.Map {
-		if !strings.HasPrefix(url, "vendor/") {
+	for _, path := range m.modules.Map {
+		if !strings.HasPrefix(path, "vendor/") {
 			continue
 		}
 
-		match := pkgReg.FindStringSubmatch(url)
+		match := pkgReg.FindStringSubmatch(path)
 		if len(match) != 2 {
 			continue
 		}

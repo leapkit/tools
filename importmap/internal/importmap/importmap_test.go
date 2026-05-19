@@ -23,7 +23,7 @@ func TestImportMapPin(t *testing.T) {
 
 	t.Cleanup(func() { http.DefaultClient = &http.Client{} })
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	t.Run("correct pinning a package", func(t *testing.T) {
@@ -40,14 +40,14 @@ func TestImportMapPin(t *testing.T) {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 
-		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/index.js" } }`
+		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
 		current := strings.Join(strings.Fields(string(m.JSON())), " ")
 
 		if current != expected {
 			t.Errorf("Expected %q, got %q", expected, current)
 		}
 
-		if _, err := os.Stat("vendor/pkg@1.0.0/index.js"); err != nil {
+		if _, err := os.Stat("vendor/pkg@1.0.0/bundle.min.js"); err != nil {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 	})
@@ -70,9 +70,9 @@ func TestImportMapPin(t *testing.T) {
 		expected := `
 		{
 			"imports": {
-				"@pkg/one": "vendor/@pkg/one@1.0.0/index.js",
-				"@pkg/three": "vendor/@pkg/three@1.0.0/index.js",
-				"@pkg/two": "vendor/@pkg/two@1.0.0/index.js"
+				"@pkg/one": "vendor/@pkg/one@1.0.0/bundle.min.js",
+				"@pkg/three": "vendor/@pkg/three@1.0.0/bundle.min.js",
+				"@pkg/two": "vendor/@pkg/two@1.0.0/bundle.min.js"
 			}
 		}`
 
@@ -117,7 +117,7 @@ func TestImportMapPin(t *testing.T) {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 
-		expected := `{ "imports": { "pkg": "vendor/pkg@1.2.0/index.js" } }`
+		expected := `{ "imports": { "pkg": "vendor/pkg@1.2.0/bundle.min.js" } }`
 		current := strings.Join(strings.Fields(string(m.JSON())), " ")
 
 		if current != expected {
@@ -139,7 +139,7 @@ func TestImportMapPin(t *testing.T) {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 
-		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/index.js" } }`
+		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
 		current := strings.Join(strings.Fields(string(m.JSON())), " ")
 
 		if current != expected {
@@ -151,7 +151,7 @@ func TestImportMapPin(t *testing.T) {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 
-		expected = `{ "imports": { "pkg": "vendor/pkg@1.2.0/index.js" } }`
+		expected = `{ "imports": { "pkg": "vendor/pkg@1.2.0/bundle.min.js" } }`
 		current = strings.Join(strings.Fields(string(m.JSON())), " ")
 
 		if current != expected {
@@ -195,7 +195,7 @@ func TestImportMapUnpin(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	ctx := context.Background()
@@ -233,7 +233,7 @@ func TestImportMapUnpin(t *testing.T) {
 			t.Errorf("Expected nil, got error %v", err)
 		}
 
-		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/index.js" } }`
+		expected := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
 		current := strings.Join(strings.Fields(string(m.JSON())), " ")
 
 		if current != expected {
@@ -259,7 +259,7 @@ func TestImportMapUpdate(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	ctx := context.Background()
@@ -281,7 +281,7 @@ func TestImportMapUpdate(t *testing.T) {
 		expected := `
 		{
 			"imports": {
-				"pkg": "vendor/pkg@2.2.3/index.js"
+				"pkg": "vendor/pkg@2.2.3/bundle.min.js"
 			}
 		}`
 
@@ -317,7 +317,7 @@ func TestImportMapPristine(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	currentImportMap := `{ "imports": { "pkg": "vendor/pkg@1.0.0/index.js" } }`
+	currentImportMap := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
 
 	f, _ := os.Create("importmap.json")
 	f.WriteString(currentImportMap)
@@ -327,7 +327,7 @@ func TestImportMapPristine(t *testing.T) {
 		t.Errorf("Expected directory not to exist, got error %v", err)
 	}
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 	m := importmap.NewManager(".", mockedGenerator, mockAuditor)
 
@@ -335,7 +335,7 @@ func TestImportMapPristine(t *testing.T) {
 		t.Errorf("Expected nil, got error %v", err)
 	}
 
-	if _, err := os.Stat("vendor/pkg@1.0.0/index.js"); os.IsNotExist(err) {
+	if _, err := os.Stat("vendor/pkg@1.0.0/bundle.min.js"); os.IsNotExist(err) {
 		t.Error("Expected file to exist")
 	}
 }
@@ -353,7 +353,7 @@ func TestImportMapJSON(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	t.Run("correct JSON", func(t *testing.T) {
@@ -361,7 +361,7 @@ func TestImportMapJSON(t *testing.T) {
 
 		m.Pin(context.Background(), "@pkg/one", "@pkg/two", "@pkg/three")
 
-		expected := `{ "imports": { "@pkg/one": "vendor/@pkg/one@1.0.0/index.js", "@pkg/three": "vendor/@pkg/three@1.0.0/index.js", "@pkg/two": "vendor/@pkg/two@1.0.0/index.js" } }`
+		expected := `{ "imports": { "@pkg/one": "vendor/@pkg/one@1.0.0/bundle.min.js", "@pkg/three": "vendor/@pkg/three@1.0.0/bundle.min.js", "@pkg/two": "vendor/@pkg/two@1.0.0/bundle.min.js" } }`
 
 		if strings.Join(strings.Fields(string(m.JSON())), " ") != expected {
 			t.Errorf("Expected %q, got %q", expected, m.JSON())
@@ -399,7 +399,7 @@ func TestImportMapPackages(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	t.Run("correct printing packages", func(t *testing.T) {
@@ -421,16 +421,16 @@ func TestImportMapPackages(t *testing.T) {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
 
-		if !strings.Contains(buf.String(), "@pkg/one   to: vendor/@pkg/one@1.0.0/index.js") {
-			t.Errorf("Expected '@pkg/one   to: vendor/@pkg/one@1.0.0/index.js', got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "@pkg/one   to: vendor/@pkg/one@1.0.0/bundle.min.js") {
+			t.Errorf("Expected '@pkg/one   to: vendor/@pkg/one@1.0.0/bundle.min.js', got '%v'", buf.String())
 		}
 
-		if !strings.Contains(buf.String(), "@pkg/two   to: vendor/@pkg/two@1.0.0/index.js") {
-			t.Errorf("Expected '@pkg/two   to: vendor/@pkg/two@1.0.0/index.js', got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "@pkg/two   to: vendor/@pkg/two@1.0.0/bundle.min.js") {
+			t.Errorf("Expected '@pkg/two   to: vendor/@pkg/two@1.0.0/bundle.min.js', got '%v'", buf.String())
 		}
 
-		if !strings.Contains(buf.String(), "@pkg/three to: vendor/@pkg/three@1.0.0/index.js") {
-			t.Errorf("Expected '@pkg/three to: vendor/@pkg/three@1.0.0/index.js', got '%v'", buf.String())
+		if !strings.Contains(buf.String(), "@pkg/three to: vendor/@pkg/three@1.0.0/bundle.min.js") {
+			t.Errorf("Expected '@pkg/three to: vendor/@pkg/three@1.0.0/bundle.min.js', got '%v'", buf.String())
 		}
 	})
 }
@@ -448,7 +448,7 @@ func TestImportMapAudit(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	t.Run("correct auditing packages", func(t *testing.T) {
@@ -589,7 +589,7 @@ func TestImportMapOutdated(t *testing.T) {
 		os.RemoveAll("vendor")
 	})
 
-	mockedGenerator := &mockGenerator{}
+	mockedGenerator := &mockBundler{}
 	mockAuditor := &mockAuditor{}
 
 	t.Run("correct outdated packages", func(t *testing.T) {
@@ -680,206 +680,6 @@ func TestImportMapOutdated(t *testing.T) {
 			t.Errorf("Expected error, got nil")
 		}
 	})
-}
-
-func TestImportMapScopes(t *testing.T) {
-	os.Chdir(t.TempDir())
-
-	http.DefaultClient = &http.Client{
-		Transport: &mockedRoundTripper{},
-	}
-
-	t.Cleanup(func() {
-		http.DefaultClient = &http.Client{}
-		os.Remove("importmap.json")
-		os.RemoveAll("vendor")
-	})
-
-	// Create a mock generator that returns scopes
-	mockGenWithScopes := &mockGeneratorWithScopes{}
-	mockAuditor := &mockAuditor{}
-
-	ctx := context.Background()
-
-	t.Run("correct pinning a package with scopes", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Remove("importmap.json")
-			os.RemoveAll("vendor")
-		})
-
-		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
-		err := m.Pin(ctx, "@org/package-main")
-		if err != nil {
-			t.Errorf("Expected nil, got error %v", err)
-		}
-
-		jsonBytes := m.JSON()
-		jsonStr := string(jsonBytes)
-
-		if !strings.Contains(jsonStr, "@org/package-main") {
-			t.Error("Expected @org/package-main in JSON")
-		}
-
-		if !strings.Contains(jsonStr, "scopes") {
-			t.Error("Expected scopes field in JSON")
-		}
-
-		if !strings.Contains(jsonStr, "vendor/") {
-			t.Error("Expected vendor/ paths in scopes")
-		}
-
-		if !strings.Contains(jsonStr, "@org/package-dep/utils") {
-			t.Error("Expected @org/package-dep/utils in scopes")
-		}
-	})
-
-	t.Run("unpinning a package removes it from imports", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Remove("importmap.json")
-			os.RemoveAll("vendor")
-		})
-
-		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
-		m.Pin(ctx, "@org/package-main")
-
-		// Verify scope exists before unpin
-		jsonBefore := string(m.JSON())
-		if !strings.Contains(jsonBefore, "scopes") {
-			t.Fatal("Expected scopes before unpin")
-		}
-
-		err := m.Unpin(ctx, "@org/package-main")
-		if err != nil {
-			t.Errorf("Expected nil, got error %v", err)
-		}
-
-		jsonAfter := string(m.JSON())
-		if strings.Contains(jsonAfter, "@org/package-main") {
-			t.Error("Expected @org/package-main to be removed from imports")
-		}
-	})
-
-	t.Run("JSON omits empty scopes", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Remove("importmap.json")
-			os.RemoveAll("vendor")
-		})
-
-		m := importmap.NewManager(".", &mockGenerator{}, mockAuditor)
-		m.Pin(ctx, "pkg")
-
-		jsonBytes := m.JSON()
-		jsonStr := string(jsonBytes)
-
-		// Should not contain "scopes" field if empty
-		if strings.Contains(jsonStr, "scopes") {
-			t.Errorf("Expected JSON to omit empty scopes field, got: %s", jsonStr)
-		}
-	})
-
-	t.Run("JSON includes scopes when present", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Remove("importmap.json")
-			os.RemoveAll("vendor")
-		})
-
-		m := importmap.NewManager(".", mockGenWithScopes, mockAuditor)
-		m.Pin(ctx, "@org/package-main")
-
-		jsonBytes := m.JSON()
-		jsonStr := string(jsonBytes)
-
-		// Should contain "scopes" field
-		if !strings.Contains(jsonStr, "scopes") {
-			t.Errorf("Expected JSON to include scopes field, got: %s", jsonStr)
-		}
-	})
-
-	t.Run("downloads staticDeps including special _/ files", func(t *testing.T) {
-		t.Cleanup(func() {
-			os.Remove("importmap.json")
-			os.RemoveAll("vendor")
-		})
-
-		mockGenWithStaticDeps := &mockGeneratorWithStaticDeps{}
-		m := importmap.NewManager(".", mockGenWithStaticDeps, mockAuditor)
-
-		err := m.Pin(ctx, "@org/package-ext")
-		if err != nil {
-			t.Errorf("Expected nil, got error %v", err)
-		}
-
-		// Verify the _/ file was downloaded to scopes (dependency of main package)
-		if _, err := os.Stat("vendor/@org/package-ext@2.5.0/scopes/@org/package-base@1.5.0/_/xyz789.js"); err != nil {
-			t.Errorf("Expected _/ file in scopes, got error: %v", err)
-		}
-
-		// Verify the runtime file was downloaded to scopes
-		if _, err := os.Stat("vendor/@org/package-ext@2.5.0/scopes/@org/package-base@1.5.0/runtime/index.js"); err != nil {
-			t.Errorf("Expected runtime file in scopes, got error: %v", err)
-		}
-
-		// Verify the main package file was downloaded to package root
-		if _, err := os.Stat("vendor/@org/package-ext@2.5.0/dist/index.js"); err != nil {
-			t.Errorf("Expected main package file to exist, got error: %v", err)
-		}
-
-		// Verify JSON structure - internal files are NOT in importmap, only main package
-		jsonBytes := m.JSON()
-		jsonStr := string(jsonBytes)
-
-		// Should only have the main package in imports, not the internal _/ files
-		if !strings.Contains(jsonStr, "@org/package-ext") {
-			t.Error("Expected main package in imports")
-		}
-		
-		if !strings.Contains(jsonStr, "vendor/@org/package-ext@2.5.0/dist/index.js") {
-			t.Errorf("Expected main package path in imports, got: %s", jsonStr)
-		}
-	})
-}
-
-// mockGeneratorWithStaticDeps returns imports with staticDeps including _/ files
-type mockGeneratorWithStaticDeps struct{}
-
-func (g *mockGeneratorWithStaticDeps) Generate(ctx context.Context, packages ...string) (interface{}, error) {
-	imports := map[string]string{
-		"@org/package-ext": "https://ga.jspm.io/npm:@org/package-ext@2.5.0/dist/index.js",
-	}
-
-	staticDeps := []string{
-		"https://ga.jspm.io/npm:@org/package-base@1.5.0/_/xyz789.js",
-		"https://ga.jspm.io/npm:@org/package-base@1.5.0/runtime/index.js",
-		"https://ga.jspm.io/npm:@org/package-ext@2.5.0/dist/index.js",
-	}
-
-	return &mockGeneratorResult{
-		imports:    imports,
-		scopes:     make(map[string]map[string]string),
-		staticDeps: staticDeps,
-	}, nil
-}
-
-// mockGeneratorWithScopes returns both imports and scopes
-type mockGeneratorWithScopes struct{}
-
-func (g *mockGeneratorWithScopes) Generate(ctx context.Context, packages ...string) (interface{}, error) {
-	imports := map[string]string{
-		"@org/package-main": "https://ga.jspm.io/npm:@org/package-main@1.2.0/dist/index.js",
-	}
-
-	scopes := map[string]map[string]string{
-		"https://ga.jspm.io/": {
-			"@org/package-dep/utils": "https://ga.jspm.io/npm:@org/package-dep@2.3.0/dist/utils/index.js",
-			"package-helper":         "https://ga.jspm.io/npm:package-helper@3.1.0/dist/index.js",
-		},
-	}
-
-	return &mockGeneratorResult{
-		imports:    imports,
-		scopes:     scopes,
-		staticDeps: []string{}, // Empty by default
-	}, nil
 }
 
 func TestProcess(t *testing.T) {
@@ -1003,7 +803,7 @@ func TestProcess(t *testing.T) {
 			os.Stdout = current
 		})
 
-		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/index.js"	} }`
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js"	} }`
 
 		f, _ := os.Create("importmap.json")
 		f.WriteString(content)
@@ -1037,6 +837,207 @@ func TestProcess(t *testing.T) {
 
 		if !strings.Contains(buf.String(), "Vulnerable versions \"> 1.0.0\"") {
 			t.Errorf("Expected 'Vulnerable versions \"> 1.0.0\"', got '%v'", buf.String())
+		}
+	})
+
+	t.Run("correct process unpin command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+		os.MkdirAll("vendor/pkg@1.0.0", 0o755)
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "unpin", "pkg"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "[info] Packages unpinned successfully") {
+			t.Errorf("Expected unpin success message, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process unpin with no package", func(t *testing.T) {
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "unpin"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "[info] importmap unpin <package>") {
+			t.Errorf("Expected unpin usage message, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process update command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "update"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "[info] Packages updated successfully") {
+			t.Errorf("Expected update success message, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process pristine command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "pristine"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "[info] Packages downloaded successfully") {
+			t.Errorf("Expected pristine success message, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process json command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "json"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "pkg") {
+			t.Errorf("Expected pkg in json output, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process packages command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "packages"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "pkg") {
+			t.Errorf("Expected pkg in packages output, got %q", buf.String())
+		}
+	})
+
+	t.Run("correct process outdated command", func(t *testing.T) {
+		t.Cleanup(func() {
+			os.Remove("importmap.json")
+			os.RemoveAll("vendor")
+		})
+
+		content := `{ "imports": { "pkg": "vendor/pkg@1.0.0/bundle.min.js" } }`
+		f, _ := os.Create("importmap.json")
+		f.WriteString(content)
+		f.Close()
+
+		r, w, _ := os.Pipe()
+		current := os.Stdout
+		os.Stdout = w
+		t.Cleanup(func() { os.Stdout = current })
+
+		os.Args = []string{"importmap", "--importmap.folder=.", "outdated"}
+		if err := importmap.Process(context.Background()); err != nil {
+			t.Errorf("Expected nil, got error %v", err)
+		}
+
+		w.Close()
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+
+		if !strings.Contains(buf.String(), "pkg") {
+			t.Errorf("Expected pkg in outdated output, got %q", buf.String())
 		}
 	})
 
@@ -1094,33 +1095,17 @@ func (a *mockAuditor) Outdated(ctx context.Context, packages map[string]string) 
 	return outdated, nil
 }
 
-type mockGeneratorResult struct {
-	imports    map[string]string
-	scopes     map[string]map[string]string
-	staticDeps []string
-}
+// mockBundler implements Bundler for tests.
+// It returns "name@version" -> []byte("/* mock */") for each package,
+// defaulting to version 1.0.0 when no version is specified.
+type mockBundler struct{}
 
-func (r *mockGeneratorResult) GetImports() map[string]string {
-	return r.imports
-}
-
-func (r *mockGeneratorResult) GetScopes() map[string]map[string]string {
-	return r.scopes
-}
-
-func (r *mockGeneratorResult) GetStaticDeps() []string {
-	return r.staticDeps
-}
-
-type mockGenerator struct{}
-
-func (g *mockGenerator) Generate(ctx context.Context, packages ...string) (interface{}, error) {
+func (g *mockBundler) Bundle(ctx context.Context, packages ...string) (map[string][]byte, error) {
 	if ctx.Value("generate_no_exists") != nil {
 		pkg := "pkg"
 		if len(packages) > 0 {
 			pkg = packages[0]
 		}
-
 		return nil, fmt.Errorf("Error: Unable to resolve npm:%s@ to a valid version", pkg)
 	}
 
@@ -1128,32 +1113,18 @@ func (g *mockGenerator) Generate(ctx context.Context, packages ...string) (inter
 		return nil, fmt.Errorf("test error")
 	}
 
-	pkgVersionRegex := regexp.MustCompile(`(.+)\@([\d\.]+)$`)
+	pkgVersionRegex := regexp.MustCompile(`^(.+)@([\d\.]+)$`)
 
-	m := map[string]string{}
-	staticDeps := []string{}
-	
+	result := make(map[string][]byte)
 	for _, pkg := range packages {
 		p := pkg
-
 		if !pkgVersionRegex.MatchString(p) {
 			p += "@1.0.0"
 		}
-
-		matches := pkgVersionRegex.FindStringSubmatch(p)
-		
-		packageURL := fmt.Sprintf("https://ga.jspm.io/npm:%s/index.js", p)
-		m[matches[1]] = packageURL
-		
-		// Add the package URL to staticDeps (this is what JSPM returns)
-		staticDeps = append(staticDeps, packageURL)
+		result[p] = []byte("/* mock */")
 	}
 
-	return &mockGeneratorResult{
-		imports:    m,
-		scopes:     make(map[string]map[string]string),
-		staticDeps: staticDeps,
-	}, nil
+	return result, nil
 }
 
 type mockedRoundTripper struct{}
@@ -1163,10 +1134,28 @@ func (m *mockedRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 		return nil, fmt.Errorf("download test error")
 	}
 
-	if strings.HasPrefix(req.URL.String(), "https://api.jspm.io/generate") {
+	if req.URL.Host == "deno.bundlejs.com" {
+		q := req.URL.Query()
+		pkg := q.Get("q")
+
+		// fetchBundle request: has file=true param.
+		if q.Get("file") == "true" {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("/* mock bundle */")),
+			}, nil
+		}
+
+		// resolveVersion request: return full "name@version" spec.
+		// If pkg already has a version suffix, echo it back; otherwise default to 1.0.0.
+		version := "1.0.0"
+		if idx := strings.LastIndex(pkg, "@"); idx > 0 {
+			version = pkg[idx+1:]
+			pkg = pkg[:idx]
+		}
 		return &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       io.NopCloser(strings.NewReader(`{ "map":{ "imports":{ "pkg": "https://ga.jspm.io/npm:pkg@1.0.0/index.js" } } }`)),
+			Body:       io.NopCloser(strings.NewReader(fmt.Sprintf(`{"version":%q}`, pkg+"@"+version))),
 		}, nil
 	}
 
@@ -1186,6 +1175,6 @@ func (m *mockedRoundTripper) RoundTrip(req *http.Request) (*http.Response, error
 
 	return &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(strings.NewReader("file content")),
+		Body:       io.NopCloser(strings.NewReader("/* mock */")),
 	}, nil
 }

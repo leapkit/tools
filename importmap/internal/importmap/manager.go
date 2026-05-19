@@ -10,19 +10,6 @@ import (
 	"strings"
 )
 
-// GeneratorResult contains the imports, scopes, and staticDeps returned by a package generator.
-type GeneratorResult interface {
-	GetImports() map[string]string
-	GetScopes() map[string]map[string]string
-	GetStaticDeps() []string
-}
-
-// Generator defines an interface for generating a map of dependencies from a list of packages.
-// It returns a result that can provide imports and scopes for the given packages.
-type Generator interface {
-	Generate(context.Context, ...string) (any, error)
-}
-
 // Auditor provides methods for analyzing dependencies for known vulnerabilities
 // and checking if they are outdated.
 type Auditor interface {
@@ -31,8 +18,7 @@ type Auditor interface {
 }
 
 type modules struct {
-	Map    map[string]string            `json:"imports"`
-	Scopes map[string]map[string]string `json:"scopes,omitempty"`
+	Map map[string]string `json:"imports"`
 }
 
 func (m *modules) Bytes() []byte {
@@ -44,8 +30,8 @@ type manager struct {
 	containerFolder string
 	modules         modules
 
-	generator Generator
-	auditor   Auditor
+	bundler Bundler
+	auditor Auditor
 }
 
 func (m *manager) Packages() {
@@ -68,15 +54,14 @@ func (m *manager) JSON() []byte {
 	return m.modules.Bytes()
 }
 
-func NewManager(containerFolder string, generator Generator, auditor Auditor) *manager {
+func NewManager(containerFolder string, bundler Bundler, auditor Auditor) *manager {
 	m := &manager{
 		containerFolder: containerFolder,
 		modules: modules{
-			Map:    make(map[string]string),
-			Scopes: make(map[string]map[string]string),
+			Map: make(map[string]string),
 		},
-		auditor:   auditor,
-		generator: generator,
+		bundler: bundler,
+		auditor: auditor,
 	}
 
 	data, _ := os.ReadFile(filepath.Join(m.containerFolder, "importmap.json"))
